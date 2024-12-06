@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu - Chatbot</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .narration-container { max-height: 400px; overflow-y: auto; margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #fafafa; }
+        .narration { margin-bottom: 10px; padding: 10px; border-radius: 5px; }
+        .user-message { background-color: #d1e7ff; text-align: left; }
+        .server-message { background-color: #e2e2e2; text-align: left; }
+        .action-form { display: flex; flex-direction: column; }
+        .action-form input { padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+        .action-form button { padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .action-form button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Bienvenue dans FantasyLand</h1>
+
+    <!-- Zone de narration (historique des messages) -->
+    <div class="narration-container" id="narration-container"></div>
+
+    <!-- Zone de choix d'action -->
+    <div>
+        <form class="action-form" id="action-form">
+            <label for="action">Que voulez-vous faire ?</label>
+            <input type="text" id="action" name="action" placeholder="Explorer, discuter, ...">
+            <button type="submit">Envoyer</button>
+        </form>
+    </div>
+
+</div>
+
+<script>
+document.getElementById('action-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    var action = document.getElementById('action').value.trim();
+    if (!action) {
+        alert("Veuillez entrer une action.");
+        return;
+    }
+
+    var narrationContainer = document.getElementById('narration-container');
+    var userMessage = document.createElement('div');
+    userMessage.classList.add('narration', 'user-message');
+    userMessage.innerText = "Vous: " + action;
+    narrationContainer.appendChild(userMessage);
+
+    var serverMessageBox = document.createElement('div');
+    serverMessageBox.classList.add('narration', 'server-message');
+    narrationContainer.appendChild(serverMessageBox);
+
+    narrationContainer.scrollTop = narrationContainer.scrollHeight;
+
+    if (window.eventSource) {
+        window.eventSource.close();
+    }
+
+    var eventSource = new EventSource(`/action?action=${encodeURIComponent(action)}`);
+
+    eventSource.onmessage = function (event) {
+        if (event.data.startsWith('[IMAGE]')) {
+            var imageUrl = event.data.replace('[IMAGE] ', '').trim();
+            var imgElement = document.createElement('img');
+            imgElement.src = imageUrl;
+            imgElement.alt = "Illustration générée";
+            imgElement.style.maxWidth = '100%';
+            serverMessageBox.appendChild(imgElement);
+        } else {
+            serverMessageBox.innerText += event.data;  // Ajouter du texte narratif
+        }
+        narrationContainer.scrollTop = narrationContainer.scrollHeight;
+    };
+
+    eventSource.onerror = function (error) {
+        console.error("Erreur de streaming.", error);
+        eventSource.close();
+    };
+
+    document.getElementById('action').value = '';  // Réinitialiser le champ
+});
+</script>
+</body>
+</html>
